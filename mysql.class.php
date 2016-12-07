@@ -368,7 +368,7 @@ class DB
          $file_path .= $file['file'] . " -> ";
       }
       $file_path = rtrim($file_path, " -> ");
-      $this->SQL = filter_var(trim($SQL), FILTER_SANITIZE_STRING, FILTER_FLAG_NO_ENCODE_QUOTES);
+      $this->SQL = trim($SQL);
       $arr = explode(' ', trim($this->SQL));
       $this->mysqli_last_query = $this->SQL;
       $this->result = $this->mysqli->query($this->SQL);
