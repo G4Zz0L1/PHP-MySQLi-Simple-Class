@@ -139,7 +139,7 @@ class DB
          }
          else
          {
-            return $this->mysqli->real_escape_string(filter_var(trim($params), FILTER_SANITIZE_STRING, FILTER_FLAG_NO_ENCODE_QUOTES));
+            return $this->mysqli->real_escape_string(trim($params));
          }
       }
       else
