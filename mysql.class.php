@@ -355,6 +355,21 @@ class DB
    }
 
    /**
+    * @desc Returns the last query executed
+    */
+   public function get_last_query()
+   {
+      if ($this->mysqli_last_query != "")
+      {
+         return $this->mysqli_last_query;
+      }
+      else
+      {
+         return false;
+      }
+   }
+
+   /**
     * @desc Simple preparation to clean the SQL query to execute
     *
     * @param  <str>          SQL statement
