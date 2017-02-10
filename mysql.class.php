@@ -121,6 +121,9 @@ class DB
 
    /**
     * @desc Escapes the parameters (either scalar or array)
+    *
+    * @param  <mixed>   $params The variable to escape
+    * @return <mixed>
     */
    public function escape($params = null)
    {
@@ -367,7 +370,7 @@ class DB
    }
 
    /**
-    * @desc Simple preparation to clean the SQL query to execute
+    * @desc Simple preparation to execute the SQL query
     *
     * @param  <str>          SQL statement
     * @return <mixed|null>
