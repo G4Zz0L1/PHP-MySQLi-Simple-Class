@@ -52,18 +52,15 @@ class DB
       $this->mysqli_log_file = 'config/query.log';
       if (file_exists($this->mysqli_log_file))
       {
+         chmod($this->mysqli_log_file, 0777);
          if (!is_writable($this->mysqli_log_file))
          {
             $temp_log = file_get_contents($this->mysqli_log_file);
-            if (unlink($this->mysqli_log_file))
-            {
-               file_put_contents($this->mysqli_log_file, $temp_log);
-               chmod($this->mysqli_log_file, 0777);
-            }
-            else
+            if (!unlink($this->mysqli_log_file))
             {
                $this->mysqli_log_file = 'config/query_new.log';
             }
+            file_put_contents($this->mysqli_log_file, $temp_log);
          }
       }
       $mysqli_new_file = str_replace(".log", "_" . date("Y-m-d_H-i-s") . ".log", $this->mysqli_log_file);
