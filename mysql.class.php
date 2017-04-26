@@ -2,12 +2,12 @@
 class DB
 {
    /**
-    * @var <obj> The local object
+    * @var <obj> The local object (internal value, don't edit)
     */
    private $mysqli = NULL;
 
    /**
-    * @var <str> The number of rows affected by the last query
+    * @var <str> The number of rows affected by the last query (internal value, don't edit)
     */
    private $mysqli_affected_rows = "";
 
@@ -22,17 +22,17 @@ class DB
    private $mysqli_fetch_mode = MYSQLI_ASSOC;
 
    /**
-    * @var <str> The last inserted id (only after insert)
+    * @var <str> The last inserted id (only after insert) (internal value, don't edit)
     */
    private $mysqli_last_id = "";
 
    /**
-    * @var <str> The result of the last query executed
+    * @var <str> The result of the last query executed (internal value, don't edit)
     */
    private $mysqli_last_info = "";
 
    /**
-    * @var <str> The last query executed
+    * @var <str> The last query executed (internal value, don't edit)
     */
    private $mysqli_last_query = "";
 
@@ -47,12 +47,12 @@ class DB
    private $mysqli_log_file_group = false;
 
    /**
-    * @var <bln> True for quietly logs error only to file, false for print/debug to screen too
+    * @var <bln> If debug active -> true for quietly logs error only to file, false for print/debug to screen too
     */
    private $mysqli_log_silent = true;
 
    /**
-    * @var <bln> The state of the transaction, if active or not
+    * @var <bln> The state of the transaction, if active or not (internal value, don't edit)
     */
    private $mysqli_transaction_status = NULL;
 
