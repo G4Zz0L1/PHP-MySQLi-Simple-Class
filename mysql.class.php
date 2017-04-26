@@ -2,9 +2,9 @@
 class DB
 {
    /**
-    * @var <str> The mode to return results (MYSQLI_ASSOC, MYSQLI_NUM, or MYSQLI_BOTH)
+    * @var <obj> The local object
     */
-   private $fetch_mode = MYSQLI_ASSOC;
+   private $mysqli = NULL;
 
    /**
     * @var <str> The number of rows affected by the last query
@@ -12,9 +12,14 @@ class DB
    private $mysqli_affected_rows = "";
 
    /**
-    * @var <bln> The flag for activate query logging -> activate it in the construct
+    * @var <bln> The flag for activate query logging, activate here
     */
    private $mysqli_debug = false;
+
+   /**
+    * @var <str> The mode to return results (MYSQLI_ASSOC, MYSQLI_NUM, or MYSQLI_BOTH)
+    */
+   private $mysqli_fetch_mode = MYSQLI_ASSOC;
 
    /**
     * @var <str> The last inserted id (only after insert)
@@ -32,9 +37,14 @@ class DB
    private $mysqli_last_query = "";
 
    /**
-    * @var <str> The file in which we record the query
+    * @var <str> The absolute path that will contain the file in which we record the queries/errors (slash terminated)
     */
    private $mysqli_log_file = "";
+
+   /**
+    * @var <bln> True for group logs into folder, false otherwise
+    */
+   private $mysqli_log_file_group = false;
 
    /**
     * @var <bln> The state of the transaction, if active or not
@@ -48,45 +58,20 @@ class DB
     */
    public function __construct($db)
    {
-      $this->mysqli_debug = false;
-      $this->mysqli_log_file = 'config/query.log';
-      if (file_exists($this->mysqli_log_file))
-      {
-         chmod($this->mysqli_log_file, 0777);
-         if (!is_writable($this->mysqli_log_file))
-         {
-            $temp_log = file_get_contents($this->mysqli_log_file);
-            if (!unlink($this->mysqli_log_file))
-            {
-               $this->mysqli_log_file = 'config/query_new.log';
-            }
-            file_put_contents($this->mysqli_log_file, $temp_log);
-         }
-      }
-      $mysqli_new_file = str_replace(".log", "_" . date("Y-m-d_H-i-s") . ".log", $this->mysqli_log_file);
-      if (file_exists($this->mysqli_log_file) && filesize($this->mysqli_log_file) > 1000000)
-      {
-         rename($this->mysqli_log_file, $mysqli_new_file);
-      }
-      $temp = array('default_host' => 'host', 'default_user' => 'user', 'default_pw' => 'pass', '' => 'table', 'default_port' => 'port');
+      $temp = array('default_host' => 'host', 'default_user' => 'user', 'default_pw' => 'pass', '' => 'table', 'default_port' => 'port', 'default_table' => 'table');
       foreach ($temp as $key => $value)
       {
-         if (!isset($db[$value]) || strlen($db[$value]) < 1)
+         if (!isset($db[$value]) || strlen(trim($db[$value])) == 0)
          {
-            $db[$value] = ini_get("mysqli." . $key);
+            $db[$value] = (strlen(trim(ini_get("mysqli." . $key))) > 0) ? ini_get("mysqli." . $key) : "";
          }
       }
       $this->mysqli = new mysqli($db['host'], $db['user'], $db['pass'], $db['table'], $db['port']);
       $this->mysqli->set_charset("utf8");
       if ($this->mysqli->connect_errno)
       {
-         if ($this->mysqli_debug)
-         {
-            $write = date("d-m-Y H:i:s") . " (" . $_SERVER['REQUEST_URI'] . ") construct\nCONNECTION FAILED\n" . $this->mysqli->connect_error . " - ERRORE " . $this->mysqli->connect_errno . "\n\n\n\n";
-            @file_put_contents($this->mysqli_log_file, $write, FILE_APPEND);
-         }
-         printf("<b>Connection failed:</b> %s - Error %s\n", $this->mysqli->connect_error, $this->mysqli->connect_errno);
-         exit;
+         $write = date("d-m-Y H:i:s") . " (" . $_SERVER['REQUEST_URI'] . ") construct\nCONNECTION FAILED\n" . $this->mysqli->connect_error . " - ERRORE " . $this->mysqli->connect_errno;
+         $this->error_handling($write);
       }
    }
 
@@ -95,7 +80,10 @@ class DB
     */
    public function __destruct()
    {
-      $this->mysqli->close();
+      if (!$this->mysqli->connect_errno)
+      {
+         $this->mysqli->close();
+      }
    }
 
    /**
@@ -104,11 +92,8 @@ class DB
     */
    public function commit()
    {
-      if ($this->mysqli_debug)
-      {
-         $write = date("d-m-Y H:i:s") . " (" . $_SERVER['REQUEST_URI'] . ") commit\nTRANSACTION COMMIT\n\n\n\n";
-         @file_put_contents($this->mysqli_log_file, $write, FILE_APPEND);
-      }
+      $write = date("d-m-Y H:i:s") . " (" . $_SERVER['REQUEST_URI'] . ") commit\nTRANSACTION COMMIT";
+      $this->error_handling($write);
       $this->mysqli_transaction_status = false;
       $res = $this->mysqli->commit();
       if (!$res)
@@ -117,6 +102,107 @@ class DB
       }
       $this->mysqli->autocommit(true);
       return $res;
+   }
+
+   /**
+    * @desc Print error and logs into file
+    * @param  $string
+    * @return null
+    */
+   public function error_handling($error_msg = "", $force_write = false)
+   {
+      if ($force_write && strlen(trim($error_msg)) > 0)
+      {
+         file_put_contents($this->mysqli_log_file, $error_msg, FILE_APPEND);
+         return;
+      }
+      ini_set('display_errors', 1);
+      ini_set('display_startup_errors', 1);
+      error_reporting(-1);
+      echo "<br><pre>";
+      if ($this->mysqli_debug)
+      {
+         if (strlen(trim($this->mysqli_log_file)) == 0)
+         {
+            $this->mysqli_log_file = __DIR__ . "/";
+         }
+         $stop = 0;
+         while (strcasecmp($this->mysqli_log_file, __DIR__ . "/") != 0 && !is_writable($this->mysqli_log_file) && $stop < 10)
+         {
+            echo "Cartella " . $this->mysqli_log_file . " non scrivibile,";
+            $stop++;
+            $temp_dir = explode("/", $this->mysqli_log_file);
+            $temp_dir = array_map('trim', $temp_dir);
+            $temp_dir = array_diff($temp_dir, array(''));
+            array_splice($temp_dir, -1, 1);
+            $this->mysqli_log_file = implode("/", $temp_dir);
+            echo " fallback su " . $this->mysqli_log_file . "\n\n";
+         }
+         if (!is_writable($this->mysqli_log_file))
+         {
+            echo "Impossibile creare il file di log, gli errori verranno stampati solo a schermo!\n\n";
+            $this->mysqli_debug = false;
+         }
+         else if ($this->mysqli_log_file_group)
+         {
+            $umask = umask(0);
+            mkdir($this->mysqli_log_file . "logs", 0777);
+            umask($umask);
+            $this->mysqli_log_file = $this->mysqli_log_file . "logs/";
+         }
+         $this->mysqli_log_file .= 'query.log';
+         if (file_exists($this->mysqli_log_file))
+         {
+            chmod($this->mysqli_log_file, 0777);
+            if (!is_writable($this->mysqli_log_file))
+            {
+               $temp_log = @file_get_contents($this->mysqli_log_file);
+               if (!unlink($this->mysqli_log_file))
+               {
+                  $this->mysqli_log_file = str_ireplace("query.log", "query_new.log", $this->mysqli_log_file);
+               }
+               file_put_contents($this->mysqli_log_file, $temp_log);
+            }
+            if (filesize($this->mysqli_log_file) > 1000000)
+            {
+               $mysqli_new_file = str_replace(".log", "_" . date("Y-m-d_H-i-s") . ".log", $this->mysqli_log_file);
+               rename($this->mysqli_log_file, $mysqli_new_file);
+            }
+         }
+         else
+         {
+            touch($this->mysqli_log_file);
+         }
+      }
+      if ($this->mysqli_debug)
+      {
+         debug_print_backtrace();
+         echo "\n";
+      }
+      $debugarray = debug_backtrace();
+      if (strlen(trim($error_msg)) > 0)
+      {
+         if ($this->mysqli_debug)
+         {
+            file_put_contents($this->mysqli_log_file, $error_msg . "\n", FILE_APPEND);
+         }
+         echo $error_msg . "\n\n";
+      }
+      for (($this->mysqli_debug) ? $i = 0 : $i = 1; $i < count($debugarray); $i++)
+      {
+         $error_string = "Errore alla riga " . $debugarray[$i]['line'] . " del file " . $debugarray[$i]['file'] . " (" . $debugarray[$i]['function'] . ")";
+         echo $error_string . "\n";
+         if ($this->mysqli_debug)
+         {
+            file_put_contents($this->mysqli_log_file, $error_string . "\n", FILE_APPEND);
+         }
+      }
+      if ($this->mysqli_debug)
+      {
+         file_put_contents($this->mysqli_log_file, "\n", FILE_APPEND);
+      }
+      echo "</pre>";
+      exit();
    }
 
    /**
@@ -234,7 +320,7 @@ class DB
             }
          }
       }
-      while ($row = $this->result->fetch_array($this->fetch_mode))
+      while ($row = $this->result->fetch_array($this->mysqli_fetch_mode))
       {
          switch ($type)
          {
@@ -392,10 +478,10 @@ class DB
          $this->mysqli_last_id = $this->mysqli->insert_id;
          $this->mysqli_last_info = $this->mysqli->info;
          $this->mysqli_affected_rows = $this->mysqli->affected_rows;
-         if ($this->mysqli_debug || stripos($arr[0], "select") === FALSE)
+         if (stripos($arr[0], "select") === FALSE)
          {
-            $write = date("d-m-Y H:i:s") . " (" . $_SERVER['REQUEST_URI'] . ") query\n" . $file_path . "\n" . $this->SQL . "\n\n";
-            @file_put_contents($this->mysqli_log_file, $write, FILE_APPEND);
+            $write = date("d-m-Y H:i:s") . " (" . $_SERVER['REQUEST_URI'] . ") query\n" . $file_path . "\n" . $this->SQL;
+            $this->error_handling($write, true);
          }
          return true;
       }
@@ -404,10 +490,8 @@ class DB
          $this->mysqli_last_id = false;
          $this->mysqli_last_info = false;
          $this->mysqli_affected_rows = false;
-         $write = date("d-m-Y H:i:s") . " (" . $_SERVER['REQUEST_URI'] . ") query\n" . $file_path . "\nPROBLEM WITH QUERY: " . $this->SQL . "\n" . $this->mysqli->error . " ERRORE " . $this->mysqli->errno . "\n\n";
-         @file_put_contents($this->mysqli_log_file, $write, FILE_APPEND);
-         printf("<b>Problem with SQL:</b><br>\n%s<br>\n%s Errore %s<br>\n", $this->SQL, $this->mysqli->error, $this->mysqli->errno);
-         exit;
+         $write = date("d-m-Y H:i:s") . " (" . $_SERVER['REQUEST_URI'] . ") query\n" . $file_path . "\nPROBLEM WITH QUERY: " . $this->SQL . "\n" . $this->mysqli->error . " ERRORE " . $this->mysqli->errno;
+         $this->error_handling($write);
       }
    }
 
@@ -417,11 +501,8 @@ class DB
     */
    public function rollback()
    {
-      if ($this->mysqli_debug)
-      {
-         $write = date("d-m-Y H:i:s") . " (" . $_SERVER['REQUEST_URI'] . ") rollback\nTRANSACTION ROLLBACK\n\n\n\n";
-         @file_put_contents($this->mysqli_log_file, $write, FILE_APPEND);
-      }
+      $write = date("d-m-Y H:i:s") . " (" . $_SERVER['REQUEST_URI'] . ") rollback\nTRANSACTION ROLLBACK";
+      $this->error_handling($write);
       $this->mysqli_transaction_status = false;
       $res = $this->mysqli->rollback();
       $this->mysqli->autocommit(true);
@@ -440,13 +521,13 @@ class DB
          switch ($type)
          {
             case 1:
-               $this->fetch_mode = MYSQLI_NUM;
+               $this->mysqli_fetch_mode = MYSQLI_NUM;
                break;
             case 2:
-               $this->fetch_mode = MYSQLI_BOTH;
+               $this->mysqli_fetch_mode = MYSQLI_BOTH;
                break;
             default:
-               $this->fetch_mode = MYSQLI_ASSOC;
+               $this->mysqli_fetch_mode = MYSQLI_ASSOC;
                break;
          }
          return true;
@@ -472,21 +553,15 @@ class DB
       {
          if ($value)
          {
-            if ($this->mysqli_debug)
-            {
-               $write = "\n\n" . date("d-m-Y H:i:s") . " (" . $_SERVER['REQUEST_URI'] . ") transaction\nTRANSACTION BEGIN\n\n\n\n";
-               @file_put_contents($this->mysqli_log_file, $write, FILE_APPEND);
-            }
+            $write = "\n\n" . date("d-m-Y H:i:s") . " (" . $_SERVER['REQUEST_URI'] . ") transaction\nTRANSACTION BEGIN";
+            $this->error_handling($write);
             $this->mysqli_transaction_status = true;
             return $this->mysqli->autocommit(false);
          }
          else
          {
-            if ($this->mysqli_debug)
-            {
-               $write = "\n\n" . date("d-m-Y H:i:s") . " (" . $_SERVER['REQUEST_URI'] . ") transaction\nTRANSACTION END\n\n\n\n";
-               @file_put_contents($this->mysqli_log_file, $write, FILE_APPEND);
-            }
+            $write = "\n\n" . date("d-m-Y H:i:s") . " (" . $_SERVER['REQUEST_URI'] . ") transaction\nTRANSACTION END";
+            $this->error_handling($write);
             $this->mysqli_transaction_status = false;
             return $this->mysqli->autocommit(true);
          }
