@@ -47,6 +47,11 @@ class DB
    private $mysqli_log_file_group = false;
 
    /**
+    * @var <bln> True for quietly logs error only to file, false for print/debug to screen too
+    */
+   private $mysqli_log_silent = true;
+
+   /**
     * @var <bln> The state of the transaction, if active or not
     */
    private $mysqli_transaction_status = NULL;
@@ -116,10 +121,13 @@ class DB
          file_put_contents($this->mysqli_log_file, $error_msg, FILE_APPEND);
          return;
       }
-      ini_set('display_errors', 1);
-      ini_set('display_startup_errors', 1);
-      error_reporting(-1);
-      echo "<br><pre>";
+      if (!$this->mysqli_log_silent)
+      {
+         ini_set('display_errors', 1);
+         ini_set('display_startup_errors', 1);
+         error_reporting(-1);
+         echo "<br><pre>";
+      }
       if ($this->mysqli_debug)
       {
          if (strlen(trim($this->mysqli_log_file)) == 0)
@@ -129,18 +137,27 @@ class DB
          $stop = 0;
          while (strcasecmp($this->mysqli_log_file, __DIR__ . "/") != 0 && !is_writable($this->mysqli_log_file) && $stop < 10)
          {
-            echo "Cartella " . $this->mysqli_log_file . " non scrivibile,";
+            if (!$this->mysqli_log_silent)
+            {
+               echo "Cartella " . $this->mysqli_log_file . " non scrivibile,";
+            }
             $stop++;
             $temp_dir = explode("/", $this->mysqli_log_file);
             $temp_dir = array_map('trim', $temp_dir);
             $temp_dir = array_diff($temp_dir, array(''));
             array_splice($temp_dir, -1, 1);
             $this->mysqli_log_file = implode("/", $temp_dir);
-            echo " fallback su " . $this->mysqli_log_file . "\n\n";
+            if (!$this->mysqli_log_silent)
+            {
+               echo " fallback su " . $this->mysqli_log_file . "\n\n";
+            }
          }
          if (!is_writable($this->mysqli_log_file))
          {
-            echo "Impossibile creare il file di log, gli errori verranno stampati solo a schermo!\n\n";
+            if (!$this->mysqli_log_silent)
+            {
+               echo "Impossibile creare il file di log, gli errori verranno stampati solo a schermo!\n\n";
+            }
             $this->mysqli_debug = false;
          }
          else if ($this->mysqli_log_file_group)
@@ -174,7 +191,7 @@ class DB
             touch($this->mysqli_log_file);
          }
       }
-      if ($this->mysqli_debug)
+      if ($this->mysqli_debug && !$this->mysqli_log_silent)
       {
          debug_print_backtrace();
          echo "\n";
@@ -186,12 +203,18 @@ class DB
          {
             file_put_contents($this->mysqli_log_file, $error_msg . "\n", FILE_APPEND);
          }
-         echo $error_msg . "\n\n";
+         if (!$this->mysqli_log_silent)
+         {
+            echo $error_msg . "\n\n";
+         }
       }
       for (($this->mysqli_debug) ? $i = 0 : $i = 1; $i < count($debugarray); $i++)
       {
          $error_string = "Errore alla riga " . $debugarray[$i]['line'] . " del file " . $debugarray[$i]['file'] . " (" . $debugarray[$i]['function'] . ")";
-         echo $error_string . "\n";
+         if (!$this->mysqli_log_silent)
+         {
+            echo $error_string . "\n";
+         }
          if ($this->mysqli_debug)
          {
             file_put_contents($this->mysqli_log_file, $error_string . "\n", FILE_APPEND);
@@ -201,8 +224,11 @@ class DB
       {
          file_put_contents($this->mysqli_log_file, "\n", FILE_APPEND);
       }
-      echo "</pre>";
-      exit();
+      if (!$this->mysqli_log_silent)
+      {
+         echo "</pre>";
+         exit();
+      }
    }
 
    /**
