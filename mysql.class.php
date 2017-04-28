@@ -111,15 +111,22 @@ class DB
 
    /**
     * @desc Print error and logs into file
-    * @param  $string
+    * @param  $string The   string to write
+    * @param  $bln    Force the method to write to log to file and quit
     * @return null
     */
    public function error_handling($error_msg = "", $force_write = false)
    {
+      if (strlen(trim($error_msg)) == 0)
+      {
+         return;
+      }
       if ($force_write && strlen(trim($error_msg)) > 0)
       {
-         file_put_contents($this->mysqli_log_file, $error_msg, FILE_APPEND);
-         return;
+         $old_debug = $this->mysqli_debug;
+         $this->mysqli_debug = true;
+         $old_log_silent = $this->mysqli_log_silent;
+         $this->mysqli_log_silent = true;
       }
       if (!$this->mysqli_log_silent)
       {
@@ -137,11 +144,11 @@ class DB
          $stop = 0;
          while (strcasecmp($this->mysqli_log_file, __DIR__ . "/") != 0 && !is_writable($this->mysqli_log_file) && $stop < 10)
          {
+            $stop++;
             if (!$this->mysqli_log_silent)
             {
                echo "Cartella " . $this->mysqli_log_file . " non scrivibile,";
             }
-            $stop++;
             $temp_dir = explode("/", $this->mysqli_log_file);
             $temp_dir = array_map('trim', $temp_dir);
             $temp_dir = array_diff($temp_dir, array(''));
@@ -190,6 +197,13 @@ class DB
          {
             touch($this->mysqli_log_file);
          }
+      }
+      if ($force_write && strlen(trim($error_msg)) > 0)
+      {
+         file_put_contents($this->mysqli_log_file, $error_msg, FILE_APPEND);
+         $this->mysqli_debug = $old_debug;
+         $this->mysqli_log_silent = $old_log_silent;
+         return;
       }
       if ($this->mysqli_debug && !$this->mysqli_log_silent)
       {
@@ -504,7 +518,7 @@ class DB
          $this->mysqli_last_id = $this->mysqli->insert_id;
          $this->mysqli_last_info = $this->mysqli->info;
          $this->mysqli_affected_rows = $this->mysqli->affected_rows;
-         if (stripos($arr[0], "select") === FALSE)
+         if ($this->mysqli_debug || stripos($arr[0], "select") === FALSE)
          {
             $write = date("d-m-Y H:i:s") . " (" . $_SERVER['REQUEST_URI'] . ") query\n" . $file_path . "\n" . $this->SQL;
             $this->error_handling($write, true);
