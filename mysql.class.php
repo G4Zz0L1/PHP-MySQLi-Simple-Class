@@ -174,7 +174,10 @@ class DB
             umask($umask);
             $this->mysqli_log_file = $this->mysqli_log_file . "logs/";
          }
+         if (!is_file($this->mysqli_log_file))
+         {
          $this->mysqli_log_file .= 'query.log';
+         }
          if (file_exists($this->mysqli_log_file))
          {
             chmod($this->mysqli_log_file, 0777);
@@ -200,7 +203,7 @@ class DB
       }
       if ($force_write && strlen(trim($error_msg)) > 0)
       {
-         file_put_contents($this->mysqli_log_file, $error_msg, FILE_APPEND);
+         file_put_contents($this->mysqli_log_file, $error_msg . "\n\n", FILE_APPEND);
          $this->mysqli_debug = $old_debug;
          $this->mysqli_log_silent = $old_log_silent;
          return;
