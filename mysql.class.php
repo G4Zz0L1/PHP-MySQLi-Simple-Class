@@ -76,7 +76,7 @@ class DB
       if ($this->mysqli->connect_errno)
       {
          $write = date("d-m-Y H:i:s") . " (" . $_SERVER['REQUEST_URI'] . ") construct\nCONNECTION FAILED\n" . $this->mysqli->connect_error . " - ERRORE " . $this->mysqli->connect_errno;
-         $this->error_handling($write);
+         $this->error_handling($write, false);
       }
    }
 
@@ -115,7 +115,7 @@ class DB
     * @param  $bln    Force the method to write to log to file and quit
     * @return null
     */
-   public function error_handling($error_msg = "", $force_write = false)
+   public function error_handling($error_msg = "", $force_write = true)
    {
       if (strlen(trim($error_msg)) == 0)
       {
@@ -174,31 +174,34 @@ class DB
             umask($umask);
             $this->mysqli_log_file = $this->mysqli_log_file . "logs/";
          }
-         if (!is_file($this->mysqli_log_file))
+         if ($this->mysqli_debug)
          {
-            $this->mysqli_log_file .= 'query.log';
-         }
-         if (file_exists($this->mysqli_log_file))
-         {
-            chmod($this->mysqli_log_file, 0777);
-            if (!is_writable($this->mysqli_log_file))
+            if (!is_file($this->mysqli_log_file))
             {
-               $temp_log = @file_get_contents($this->mysqli_log_file);
-               if (!unlink($this->mysqli_log_file))
+               $this->mysqli_log_file .= 'query.log';
+            }
+            if (file_exists($this->mysqli_log_file))
+            {
+               chmod($this->mysqli_log_file, 0777);
+               if (!is_writable($this->mysqli_log_file))
                {
-                  $this->mysqli_log_file = str_ireplace("query.log", "query_new.log", $this->mysqli_log_file);
+                  $temp_log = @file_get_contents($this->mysqli_log_file);
+                  if (!unlink($this->mysqli_log_file))
+                  {
+                     $this->mysqli_log_file = str_ireplace("query.log", "query_new.log", $this->mysqli_log_file);
+                  }
+                  file_put_contents($this->mysqli_log_file, $temp_log);
                }
-               file_put_contents($this->mysqli_log_file, $temp_log);
+               if (filesize($this->mysqli_log_file) > 1000000)
+               {
+                  $mysqli_new_file = str_replace(".log", "_" . date("Y-m-d_H-i-s") . ".log", $this->mysqli_log_file);
+                  rename($this->mysqli_log_file, $mysqli_new_file);
+               }
             }
-            if (filesize($this->mysqli_log_file) > 1000000)
+            else
             {
-               $mysqli_new_file = str_replace(".log", "_" . date("Y-m-d_H-i-s") . ".log", $this->mysqli_log_file);
-               rename($this->mysqli_log_file, $mysqli_new_file);
+               touch($this->mysqli_log_file);
             }
-         }
-         else
-         {
-            touch($this->mysqli_log_file);
          }
       }
       if ($force_write && strlen(trim($error_msg)) > 0)
@@ -514,7 +517,7 @@ class DB
          if ($this->mysqli_debug || stripos($arr[0], "select") === FALSE)
          {
             $write = date("d-m-Y H:i:s") . " (" . $_SERVER['REQUEST_URI'] . ") query\n" . $file_path . "\n" . $this->SQL;
-            $this->error_handling($write, true);
+            $this->error_handling($write);
          }
          return true;
       }
@@ -524,7 +527,7 @@ class DB
          $this->mysqli_last_info = false;
          $this->mysqli_affected_rows = false;
          $write = date("d-m-Y H:i:s") . " (" . $_SERVER['REQUEST_URI'] . ") query\n" . $file_path . "\nPROBLEM WITH QUERY: " . $this->SQL . "\n" . $this->mysqli->error . " ERRORE " . $this->mysqli->errno;
-         $this->error_handling($write);
+         $this->error_handling($write, false);
       }
    }
 
