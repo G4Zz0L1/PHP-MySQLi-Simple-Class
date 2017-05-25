@@ -176,7 +176,7 @@ class DB
          }
          if (!is_file($this->mysqli_log_file))
          {
-         $this->mysqli_log_file .= 'query.log';
+            $this->mysqli_log_file .= 'query.log';
          }
          if (file_exists($this->mysqli_log_file))
          {
@@ -353,7 +353,6 @@ class DB
                {
                   // numeric single -> fetch row
                   $type = "num";
-                  $data = "";
                }
                else
                {
@@ -362,6 +361,11 @@ class DB
                }
             }
          }
+      }
+      // Fetch one field of a specific row
+      if (count($field) == 2 && is_numeric($field[0]) && !is_numeric($field[1]))
+      {
+         $type = "row_field";
       }
       while ($row = $this->result->fetch_array($this->mysqli_fetch_mode))
       {
@@ -375,14 +379,7 @@ class DB
                // Select the specific column
                if (in_array($field, array_keys($row)))
                {
-                  if ($this->mysqli->affected_rows > 1)
-                  {
-                     $data[$count][$field] = $row[$field];
-                  }
-                  else
-                  {
-                     $data = $row[$field];
-                  }
+                  $data[$count] = $row[$field];
                }
                break;
             case 'num':
@@ -393,37 +390,30 @@ class DB
                }
                break;
             case 'str_arr':
-               // Select the selected columns
+               // Select the specifics columns
                foreach ($field as $value)
                {
                   if (in_array($value, array_keys($row)))
                   {
-                     if ($this->mysqli->affected_rows > 1)
-                     {
-                        $data[$count][$value] = $row[$value];
-                     }
-                     else
-                     {
-                        $data[$value] = $row[$value];
-                     }
+                     $data[$count][$value] = $row[$value];
                   }
                }
                break;
             case 'num_arr':
-               // Select the selected rows
+               // Select the specifics rows
                foreach ($field as $value)
                {
                   if ($count == $value)
                   {
-                     if ($this->mysqli->affected_rows > 1)
-                     {
-                        $data[$count] = $row;
-                     }
-                     else
-                     {
-                        $data = $row;
-                     }
+                     $data[$count] = $row;
                   }
+               }
+               break;
+            case 'row_field':
+               // Fetch one field of a specific row
+               if ($count == $field[0] && in_array($field[1], array_keys($row)))
+               {
+                  $data = $row[$field[1]];
                }
                break;
             default:
