@@ -76,7 +76,7 @@ class DB
       if ($this->mysqli->connect_errno)
       {
          $write = date("d-m-Y H:i:s") . " (" . $_SERVER['REQUEST_URI'] . ") construct\nCONNECTION FAILED\n" . $this->mysqli->connect_error . " - ERRORE " . $this->mysqli->connect_errno;
-         $this->error_handling($write, true, true);
+         $this->error_handling($write, false, true);
       }
    }
 
@@ -536,7 +536,7 @@ class DB
          $this->mysqli_last_info = false;
          $this->mysqli_affected_rows = false;
          $write = date("d-m-Y H:i:s") . " (" . $_SERVER['REQUEST_URI'] . ") query\n" . $file_path . "\nPROBLEM WITH QUERY: " . $this->SQL . "\n" . $this->mysqli->error . " ERRORE " . $this->mysqli->errno;
-         $this->error_handling($write, true, true);
+         $this->error_handling($write, false, true);
       }
    }
 
