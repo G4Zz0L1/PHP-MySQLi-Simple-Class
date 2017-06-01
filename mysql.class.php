@@ -76,7 +76,7 @@ class DB
       if ($this->mysqli->connect_errno)
       {
          $write = date("d-m-Y H:i:s") . " (" . $_SERVER['REQUEST_URI'] . ") construct\nCONNECTION FAILED\n" . $this->mysqli->connect_error . " - ERRORE " . $this->mysqli->connect_errno;
-         $this->error_handling($write, false);
+         $this->error_handling($write, true, true);
       }
    }
 
@@ -115,7 +115,7 @@ class DB
     * @param  $bln    Force the method to write to log to file and quit
     * @return null
     */
-   public function error_handling($error_msg = "", $force_write = true)
+   public function error_handling($error_msg = "", $force_write = true, $force_debug = false)
    {
       if (strlen(trim($error_msg)) == 0)
       {
@@ -127,6 +127,11 @@ class DB
          $this->mysqli_debug = true;
          $old_log_silent = $this->mysqli_log_silent;
          $this->mysqli_log_silent = true;
+      }
+      if ($force_debug && strlen(trim($error_msg)) > 0)
+      {
+         $old_debug = $this->mysqli_debug;
+         $this->mysqli_debug = true;
       }
       if (!$this->mysqli_log_silent)
       {
@@ -243,6 +248,10 @@ class DB
       if ($this->mysqli_debug)
       {
          file_put_contents($this->mysqli_log_file, "\n", FILE_APPEND);
+      }
+      if ($force_debug && strlen(trim($error_msg)) > 0)
+      {
+         $this->mysqli_debug = $old_debug;
       }
       if (!$this->mysqli_log_silent)
       {
@@ -527,7 +536,7 @@ class DB
          $this->mysqli_last_info = false;
          $this->mysqli_affected_rows = false;
          $write = date("d-m-Y H:i:s") . " (" . $_SERVER['REQUEST_URI'] . ") query\n" . $file_path . "\nPROBLEM WITH QUERY: " . $this->SQL . "\n" . $this->mysqli->error . " ERRORE " . $this->mysqli->errno;
-         $this->error_handling($write, false);
+         $this->error_handling($write, true, true);
       }
    }
 
