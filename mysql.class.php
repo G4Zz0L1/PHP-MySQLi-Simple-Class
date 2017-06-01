@@ -132,6 +132,8 @@ class DB
       {
          $old_debug = $this->mysqli_debug;
          $this->mysqli_debug = true;
+         $old_log_silent = $this->mysqli_log_silent;
+         $this->mysqli_log_silent = false;
       }
       if (!$this->mysqli_log_silent)
       {
@@ -252,6 +254,7 @@ class DB
       if ($force_debug && strlen(trim($error_msg)) > 0)
       {
          $this->mysqli_debug = $old_debug;
+         $this->mysqli_log_silent = $old_log_silent;
       }
       if (!$this->mysqli_log_silent)
       {
