@@ -251,14 +251,14 @@ class DB
       {
          file_put_contents($this->mysqli_log_file, "\n", FILE_APPEND);
       }
-      if ($force_debug && strlen(trim($error_msg)) > 0)
-      {
-         $this->mysqli_debug = $old_debug;
-         $this->mysqli_log_silent = $old_log_silent;
-      }
       if (!$this->mysqli_log_silent)
       {
          echo "</pre>";
+         if ($force_debug && strlen(trim($error_msg)) > 0)
+         {
+            $this->mysqli_debug = $old_debug;
+            $this->mysqli_log_silent = $old_log_silent;
+         }
          exit();
       }
    }
