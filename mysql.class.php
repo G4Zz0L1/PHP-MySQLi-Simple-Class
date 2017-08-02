@@ -1,4 +1,16 @@
 <?php
+/**
+ * PHP-MySQLi-Simple-Class
+ *
+ * @category  Database Access
+ * @version   1.0
+ * @package   DB
+ *
+ * @author    Simone Gazzoli <g4zz0l10@gmail.com>
+ * @license   http://opensource.org/licenses/gpl-3.0.html GNU Public License
+ *
+ * @link      https://github.com/G4Zz0L1/PHP-MySQLi-Simple-Class
+ */
 class DB
 {
    /**
