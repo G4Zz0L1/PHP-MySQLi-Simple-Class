@@ -225,7 +225,14 @@ class DB
       }
       if ($force_write && strlen(trim($error_msg)) > 0)
       {
-         file_put_contents($this->mysqli_log_file, $error_msg . "\n\n", FILE_APPEND);
+         if ($this->mysqli_debug)
+         {
+            file_put_contents($this->mysqli_log_file, $error_msg . "\n\n", FILE_APPEND);
+         }
+         else if (!$this->mysqli_log_silent)
+         {
+            echo $error_msg . "\n\n";
+         }
          $this->mysqli_debug = $old_debug;
          $this->mysqli_log_silent = $old_log_silent;
          return;
