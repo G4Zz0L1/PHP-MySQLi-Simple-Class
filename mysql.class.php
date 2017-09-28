@@ -405,10 +405,6 @@ class DB
       {
          switch ($type)
          {
-            case 'all':
-               // Grab all the data
-               $data[$count] = $row;
-               break;
             case 'str':
                // Select the specific column
                if (in_array($field, array_keys($row)))
@@ -435,12 +431,9 @@ class DB
                break;
             case 'num_arr':
                // Select the specifics rows
-               foreach ($field as $value)
+               if (in_array($count, $field))
                {
-                  if ($count == $value)
-                  {
-                     $data[$count] = $row;
-                  }
+                  $data[$count] = $row;
                }
                break;
             case 'row_field':
@@ -450,6 +443,7 @@ class DB
                   $data = $row[$field[1]];
                }
                break;
+            case 'all':
             default:
                // Grab all the data
                $data[$count] = $row;
